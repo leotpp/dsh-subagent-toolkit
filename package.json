@@ -4,6 +4,14 @@
   "description": "Configure subagent model routes and run pure official Pi CLI subagents in DeepSeek Harness",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leotpp/dsh-subagent-toolkit.git"
+  },
+  "homepage": "https://github.com/leotpp/dsh-subagent-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/leotpp/dsh-subagent-toolkit/issues"
+  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
