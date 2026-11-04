@@ -1,0 +1,35 @@
+{
+  "format": 1,
+  "title": "My DSH plugins",
+  "description": "Example index for dsh-subagent-toolkit",
+  "metadata": {},
+  "plugins": [
+    {
+      "name": "dsh-subagent-toolkit",
+      "title": "Subagent Toolkit",
+      "description": "Configure subagent model routes and run pure official Pi CLI subagents.",
+      "author": "wesleyli",
+      "homepage": "https://github.com/your-name/dsh-subagent-toolkit",
+      "metadata": {
+        "keywords": [
+          "subagent",
+          "models",
+          "pi-cli",
+          "magpie"
+        ]
+      },
+      "versions": [
+        {
+          "version": "0.2.0",
+          "publishTimestamp": 1793715000,
+          "source": {
+            "type": "npm"
+          },
+          "engines": {
+            "dsh": ">=0.2.1-rc.5 <0.3.0"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Subagent Toolkit">
+  <rect x="6" y="10" width="52" height="44" rx="12" fill="#eef2ff"/>
+  <rect x="16" y="21" width="14" height="22" rx="5" fill="#4f46e5"/>
+  <rect x="34" y="21" width="14" height="22" rx="5" fill="#93c5fd"/>
+  <circle cx="23" cy="27" r="2.5" fill="#fff"/>
+  <circle cx="41" cy="27" r="2.5" fill="#1e3a8a"/>
+  <path d="M16 50h32" stroke="#4f46e5" stroke-width="3" stroke-linecap="round"/>
+</svg>

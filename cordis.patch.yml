@@ -1,0 +1,23 @@
+# dsh-subagent-toolkit — one bundle, two capabilities:
+# 1. A pure official Pi CLI subagent provider (`subagent_pi`).
+# 2. A settings page for choosing the model routes the native `subagent` tool
+#    may use (see client.js).
+- insert:
+    - id: subagent-pi
+      name: 'dsh-subagent-toolkit'
+      config:
+        providerName: pi-cli
+        # `pi` must resolve on PATH, or set an absolute binPath here.
+        binPath: pi
+        # Empty means "use the Pi CLI's own default model from ~/.pi/agent".
+        model: ''
+        # Built-in Pi tools allowed in the child. Do not add Agent/Task: this
+        # provider intentionally runs a single-layer Pi CLI, with no Maker.
+        tools: 'read,bash,edit,write'
+
+    - id: tool-subagent-pi
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: pi-cli
+        toolName: subagent_pi
+        maxDepth: provider-managed
