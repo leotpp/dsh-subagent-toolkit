@@ -155,6 +155,13 @@ DSH 的加载顺序是：
 - **Pi CLI 是外部进程。** `subagent_pi` 会执行你本机的 `pi` 二进制，不继承父会话上下文和 DSH Session 记录；只从可信来源安装。未安装 `pi` 时只有 `subagent_pi` 不可用，不影响原生 `subagent`。
 - **API Key 存储。** 页面通过 DSH credential service 保存 key，设置页不回显；不要把 key 写进 README 或配置文件。
 
+### DSH 升级后的自检
+
+1. 打开 **Settings → 子模型**，确认能读取渠道和模型。
+2. 保存一次唯一子模型，检查 `~/.dsh/profiles/desktop/cordis.patch.yml` 里的 `subagent-model-selection-settings`。
+3. 新开一个会话，触发一次 `subagent`，确认子会话使用指定模型。
+4. 如果页面消失或保存报错：先回滚到旧版 DSH，或禁用本插件并改用官方能力。
+
 ## 目录结构
 
 ```text
