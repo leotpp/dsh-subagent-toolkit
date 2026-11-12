@@ -8,7 +8,7 @@
 
 ![选择子模型](docs/subagent-model-choice.png)
 
-> 适用 DSH `0.2.1-rc.5`（`engines.dsh: >=0.2.1-rc.5 <0.3.0`）
+> 适用 DSH `>=0.2.1-rc.5 <0.3.0`；已在 `0.2.1-rc.5` 验证，并在 `0.2.2-rc.2` 完成实际设置页保存验证。
 
 ## 为什么需要它
 
@@ -90,9 +90,17 @@ DSH 侧的两个关键点（也是使用时要记住的）：
 - `subagent-model-selection-settings` 是 **Host 在 Agent 创建时采样** 的设置。保存后只对 **新会话** 生效；老会话不会追溯。
 - `subagent` 工具只有在 Session 存在 allowlist 且调用显式传 `provider + model` 时才会切换子路由；未传参时仍按 `tool-subagent.agentOptions` / 父 Agent 路由走。
 
-## 安装
+## 安装与更新
 
-本地路径：
+插件中心已收录 `leotpp/dsh-subagent-toolkit`。可从市场安装，或用同一 GitHub 来源：
+
+```sh
+dsh plugin --profile desktop add github:leotpp/dsh-subagent-toolkit
+```
+
+后续在插件中心执行“检查更新 → 更新”；GitHub 来源会比较安装时的提交与远端提交。每次代码更新不需要重新申请收录。若当前从本地路径或 tgz 安装，需要先切换为上述 GitHub 来源，才能跟随该来源更新。
+
+本地开发也可以使用路径：
 
 ```sh
 dsh plugin --profile desktop add /absolute/path/to/dsh-subagent-toolkit
@@ -101,7 +109,7 @@ dsh plugin --profile desktop add /absolute/path/to/dsh-subagent-toolkit
 或使用目录里已打好的 tgz：
 
 ```sh
-dsh plugin --profile desktop add ./dist/dsh-subagent-toolkit-0.2.0.tgz
+dsh plugin --profile desktop add ./dist/dsh-subagent-toolkit-0.2.1.tgz
 ```
 
 发布到 npm 后：
@@ -134,14 +142,14 @@ DSH 的加载顺序是：
 也就是说：
 
 - **插件不会比官方“优先”。** 它只在 bundle 层插入自己的两个条目（`subagent-pi`、`tool-subagent-pi`），不覆盖官方条目；设置页保存的值走第 3 层，最终以用户 profile 为准。
-- **和官方设置页的关系是“同一份数据”。** 我们的页面与 DSH 官方的 Plugins → Subagent 页都编辑 `subagent-model-selection-settings`；不是谁优先级高，而是同一命名空间的值，最后保存的一方生效（页面内的 revision 校验只防同一页面的并发编辑）。
+- **和官方设置页的关系是“同一份数据”。** 我们的页面与 DSH 官方的 Plugins → Subagent 页都编辑 `subagent-model-selection-settings`；不是谁优先级高，而是同一命名空间的值，最后保存的一方生效（Host 按传入的 namespace revision 阻断过期写入，包含跨页面的并发竞争）。
 - **子代理运行时路由优先级**：`subagent` 调用显式传入的 `provider/model/reasoning_effort`（必须在 Session allowlist 中）> `tool-subagent.agentOptions` 部署默认值 > 父 Agent 的主模型。
 
 ### 兼容性
 
 | 项目 | 要求 |
 | --- | --- |
-| DSH | `>=0.2.1-rc.5 <0.3.0`；在 `0.2.1-rc.5` 上验证 |
+| DSH | `>=0.2.1-rc.5 <0.3.0`；`0.2.1-rc.5` 已验证，`0.2.2-rc.2` 已完成设置页保存实测 |
 | Client | Web 平台（`dsh.client.platform: web`），即桌面 App 的 Web GUI |
 | Pi CLI（可选） | `pi` 在 PATH，或在 `subagent-pi.binPath` 配绝对路径 |
 
@@ -176,7 +184,16 @@ dsh-subagent-toolkit/
 └── market/               # DSH 插件市场索引示例
 ```
 
+## 保存失败排查
+
+- 设置尚未加载、原生子模型设置未加载、配置只读会分别提示，保存前不会写入模型参数。
+- **原生子模型设置未加载：** 本次故障中，旧 Codex 插件引入的依赖遮蔽了原生 `tool-subagent`，导致 `subagent-model-selection-settings` 未注册。这是可能原因之一，并非所有加载失败都由版本冲突引起。请检查实际运行的 DSH 版本及当前 profile 中旧 Codex 插件的依赖，将相关官方插件包版本对齐到实际 DSH 版本，并更新或移除造成遮蔽的旧 Codex 插件后重启 DSH，再重新打开设置页保存。不要统一固定为 `rc2`，也不要通过新增配置命名空间或绕过版本检查来解决。
+- Host 拒绝子模型选择时，页面显示它返回的具体原因（例如配置版本冲突或上层配置覆盖），不再统一误报“需要命名空间”。拒绝后会尝试刷新该命名空间，供用户重新保存；不会自动覆盖冲突。
+- 模型参数、思考强度和子模型选择分三次写入。最后一步失败时，前两步可能已保存，请以错误提示和重新打开后的配置为准。
+
 ## 开发
+
+运行 `npm test` 检查保存回调的状态判断、Host 错误反馈、版本校验和接受后的共享配置更新。测试使用隔离的配置传输替身，不会修改桌面端配置。
 
 修改 `index.js` / `client.js` 后，用 `npm pack` 或 `pnpm pack` 重新生成 `dist/dsh-subagent-toolkit-<version>.tgz`，再按上面的安装命令安装即可。
 

@@ -70,7 +70,10 @@ window.__ModuleLoader__.load({
       savePi: 'Save Pi CLI model',
       saved: 'Saved',
       failed: 'Something went wrong: ',
-      unavailable: 'This settings page needs the subagent model-selection namespace.',
+      unavailable: 'Native subagent settings have not loaded. Check that DSH and the official plugin packages use matching versions, then restart DSH; a version mismatch is one possible cause.',
+      formLoading: 'Settings are still loading. Try again in a moment.',
+      readOnly: 'This deployment stores settings read-only.',
+      writeRefused: 'The host refused the write. Discard any draft on the official Subagent page and try again.',
       noCatalog: 'No model catalog yet. Configure a channel first.',
       loading: 'Loading models…',
       routeInvalid: 'Use lowercase letters, digits and hyphens for the route id.',
@@ -133,7 +136,10 @@ window.__ModuleLoader__.load({
       savePi: '保存 Pi CLI 模型',
       saved: '已保存',
       failed: '保存失败：',
-      unavailable: '该设置页需要 subagent model-selection 命名空间。',
+      unavailable: '原生子模型设置未加载。请检查 DSH 与官方插件包版本是否一致，然后重启 DSH；版本不一致只是可能原因之一。',
+      formLoading: '设置仍在加载，请稍后重试。',
+      readOnly: '当前部署的设置为只读，无法保存。',
+      writeRefused: 'Host 拒绝了设置写入，请刷新设置后重试。',
       noCatalog: '暂时没有模型目录，请先配置渠道。',
       loading: '正在加载模型…',
       routeInvalid: '路由 ID 只能使用小写字母、数字和连字符。',
@@ -279,6 +285,7 @@ window.__ModuleLoader__.load({
       const [piEffort, setPiEffort] = useState('')
       const [piStatus, setPiStatus] = useState('')
       const [modelStatus, setModelStatus] = useState('')
+      const [modelSaving, setModelSaving] = useState(false)
       const [modelContext, setModelContext] = useState('')
       const [modelMaxTokens, setModelMaxTokens] = useState('')
       const [modelEffort, setModelEffort] = useState('')
@@ -488,7 +495,12 @@ window.__ModuleLoader__.load({
       }, [catalog, controller, custom, providerConfigs, t])
 
       const saveModel = useCallback(async () => {
-        if (!controller.modelsForm) { setModelStatus(`${t('failed')}${t('unavailable')}`); return }
+        if (modelSaving) return
+        const snapshot = formSnapshot(controller.modelsForm)
+        const blocked = !snapshot || snapshot.status === 'unavailable' ? 'unavailable'
+          : snapshot.status !== 'ready' ? 'formLoading' : !snapshot.writable ? 'readOnly' : ''
+        if (blocked) { setModelStatus(`${t('failed')}${t(blocked)}`); return }
+        setModelSaving(true)
         setModelStatus('')
         const allowedModels = selectedRoute ? [parseRoute(selectedRoute)] : []
         try {
@@ -511,15 +523,25 @@ window.__ModuleLoader__.load({
             const effortOk = await controller.piForm.mutate([{ op: 'set', path: ['nativeReasoningEffort'], value: currentModelEffort }])
             if (!effortOk) throw new Error('effort write refused')
           }
-          const ok = await controller.modelsForm.mutate([
+          // ConfigForm.mutate reduces every Host refusal to false, losing its cause.
+          const response = await controller.remote.settings.mutate('subagent-model-selection-settings', [
             { op: 'set', path: ['enabled'], value: allowedModels.length > 0 },
             { op: 'set', path: ['allowedModels'], value: allowedModels },
-          ])
-          setModelStatus(ok ? t('saved') : `${t('failed')}${t('unavailable')}`)
+          ], snapshot.revision)
+          if (!response.ok) {
+            const latest = await controller.remote.settings.describe().catch(() => undefined)
+            const view = latest?.ok && latest.value.namespaces.find(row => row.ns === 'subagent-model-selection-settings')
+            if (view) controller.settings.acceptView(view)
+            throw new Error(response.error?.message || t('writeRefused'))
+          }
+          controller.settings.acceptView(response.value)
+          setModelStatus(t('saved'))
         } catch (error) {
           setModelStatus(`${t('failed')}${error instanceof Error ? error.message : String(error)}`)
+        } finally {
+          setModelSaving(false)
         }
-      }, [channelModels, controller, modelContext, currentModelEffort, modelMaxTokens, selectedProviderConfig, selectedRoute, selectedRouteValue, t])
+      }, [channelModels, controller, modelContext, currentModelEffort, modelMaxTokens, modelSaving, selectedProviderConfig, selectedRoute, selectedRouteValue, t])
 
       const savePi = useCallback(async () => {
         if (!controller.piForm) { setPiStatus(`${t('failed')}${t('unavailable')}`); return }
@@ -670,7 +692,7 @@ window.__ModuleLoader__.load({
           ),
           h('div', { style: { display: 'flex', justifyContent: 'flex-end', marginTop: 16, alignItems: 'center', gap: 12 } },
             modelStatus ? h('span', { role: 'status', style: { fontSize: 12, color: modelStatus === t('saved') ? 'var(--dsw-alias-text-positive, #177245)' : 'var(--dsw-alias-text-negative, #b42318)' } }, modelStatus) : null,
-            h(Button, { primary: true, onClick: saveModel }, t('saveModel')),
+            h(Button, { primary: true, onClick: saveModel, disabled: modelSaving }, t('saveModel')),
           ),
         ),
 
@@ -692,6 +714,7 @@ window.__ModuleLoader__.load({
     function createController(ctx) {
       return {
         remote: ctx.remote,
+        settings: ctx.configForms.describe(),
         modelsForm: ctx.configForms.get('subagent-model-selection-settings'),
         piForm: ctx.configForms.get('subagent-pi'),
         llmForm: ctx.configForms.get('llm-pi-ai'),

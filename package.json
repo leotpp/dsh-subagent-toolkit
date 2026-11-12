@@ -1,6 +1,9 @@
 {
   "name": "dsh-subagent-toolkit",
-  "version": "0.2.0",
+  "version": "0.2.1",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
   "description": "Configure subagent model routes and run pure official Pi CLI subagents in DeepSeek Harness",
   "type": "module",
   "license": "MIT",
